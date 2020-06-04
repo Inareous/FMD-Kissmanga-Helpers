@@ -157,29 +157,42 @@ class Scraper:
                         err_bucket.append({'index' : pop['index'], 'link' : pop['link']})
         return data
 
-    async def run(self, BASE_URL):
-        self.BASE_URL = BASE_URL
-        list_url = "{}/MangaList/Newest".format(self.BASE_URL)
+    async def run_async_fetch(self, func, requests, max_at_once=10, max_per_second=5):
         data = []
         err_bucket = []
-        max_retry = 10
-        self.create_connection()
-        end = await self.fetch_num_pages(list_url)
-        requests = ["{}?page={}".format(list_url, index) for index in range(1,end+1)]
         async with aiometer.amap(
-            self.fetch_manga_per_page,
+            func,
             requests,
-            max_at_once=10, # Limit maximum number of concurrently running tasks.
-            max_per_second=5,  # Limit request rate to not overload the server.
+            max_at_once=max_at_once, # Limit maximum number of concurrently running tasks.
+            max_per_second=max_per_second,  # Limit request rate to not overload the server.
         ) as results:
             async for status, resp in results:
                 if status == 0:
                     data.extend(resp)
                 elif status == -1:
                     err_bucket.append(resp[0])
-        if len(err_bucket) > 0:
-            data = self.rerun(data, err_bucket, max_retry, "fetch_manga_per_page")
-            err_bucket.clear()
+        return data, err_bucket
+
+    async def run(self, BASE_URL):
+        self.BASE_URL = BASE_URL
+        list_url = "{}/MangaList/Newest".format(self.BASE_URL)
+        data = []
+        max_retry = 10
+        retry_counter = 0
+        max_at_once = 50
+        max_per_second = 50
+        self.create_connection()
+        total_pages = await self.fetch_num_pages(list_url)
+        ################### CURRENTLY WIP
+        requests = ["{}?page={}".format(list_url, index) for index in range(1,total_pages+1)]
+        result, err_bucket = await self.run_async_fetch(self.fetch_manga_per_page, requests, max_at_once, max_per_second)
+        data.extend(result)
+        if len(err_bucket) > 0 and retry_counter < max_retry:
+            retry_counter += 1
+            self.logger.print("Re-run {} links. Retry = [{}/{}]".format(len(err_bucket), retry_counter,max_retry))
+            result, err_bucket = self.run_async_fetch(self.fetch_manga_per_page, err_bucket, max_at_once, max_per_second)
+            data.extend(result)
+        #################### BELOW IS NOT YET
         for idx, val in enumerate(data):
             try:
                 self.logger.print("Fetching manga info [{:<5}/{:<5}] -- {}".format(idx, len(data), self.BASE_URL+val['link']),0)
@@ -192,7 +205,6 @@ class Scraper:
             data = self.rerun(data, err_bucket, max_retry, "fetch_manga_info")
         data = sorted(data, key=lambda k: k['title']) 
         return data
-
 
 def main(args):
     print("-- Start --")
