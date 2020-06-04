@@ -19,12 +19,12 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == '/set':
             self.Event_dictionary_list['User-Agent'] = self.headers['User-Agent']
             self._set_response()
-            self.wfile.write("User agent set to : {}\nYou can close this tab"
+            self.wfile.write("<p>User agent set to : {}</p><p>You can close this tab</p>"
                             .format(self.Event_dictionary_list['User-Agent']).encode('utf-8'))
         if self.path == '/agent':
             self._set_response()
             self.wfile.write(self.Event_dictionary_list['User-Agent'].encode('utf-8'))
-            
+
     def log_message(self, format, *args):
         return
 

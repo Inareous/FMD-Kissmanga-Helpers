@@ -6,8 +6,11 @@ __pycache__/
 # C extensions
 *.so
 
-# Unimportant folders
+# Unimportant folders and files
 [Ff]md
+*.db
+*.pickle
+modules.json
 
 # Distribution / packaging
 .Python

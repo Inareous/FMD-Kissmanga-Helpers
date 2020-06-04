@@ -5,7 +5,6 @@ from html.parser import HTMLParser
 import re
 from helpers import browser_utils
 
-
 class chko_parser(HTMLParser):
     def __init__(self):
         HTMLParser.__init__(self)
