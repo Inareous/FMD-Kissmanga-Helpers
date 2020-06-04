@@ -5,16 +5,10 @@ import sqlite3
 import pickle
 import httpx
 import asyncio
-import datetime
-import colorama
 import unicodedata
-import browser_cookie3
-import webbrowser
 import argparse
-import subprocess
-import os
-from time import sleep
-from helpers import logger, browser_utils
+import aiometer
+from helpers import logger_utils, browser_utils, db_utils
 
 class Scraper:
     def __init__(self, logger, args):
@@ -45,16 +39,22 @@ class Scraper:
     def init_httpx(self, cookies, user_agent, domain, keys):
         self.logger.print("Initiating Httpx session with settings from Request", 0)
         headers = {'User-Agent' : user_agent}
-        self.session = httpx.Client(cookies=cookies, headers=headers)
+        httpx_cookies = httpx.Cookies()
+        for key in keys:
+            httpx_cookies.set(key, cookies[key], domain=domain)
+        self.session = httpx.AsyncClient(headers=headers, cookies=httpx_cookies)
+        
+
 
     def close(self):
-        self.session.close()
         self.sc.close()
 
-    def fetch_num_pages(self, url):
-        #get cookies & headers from this
+    async def fetch(self, request):
+        return await self.session.send(request)
+
+    async def fetch_num_pages(self, url):
         self.logger.print("Fetching total number of pages",0)
-        resp = self.session.get(url)
+        resp = await self.session.get(url)
         soup = BeautifulSoup(resp.text, features="lxml")
         num = int(soup.find("ul", class_="pager").find_all("li")[-1].contents[0]['page'])
         return num
@@ -109,20 +109,27 @@ class Scraper:
             'jdn' : jdn,
         }
 
-    def fetch_manga_per_page(self, page_url):
+    async def fetch_manga_per_page(self, page_url):
+        self.logger.print("Fetching manga page -- {}".format(page_url),0)
         data = []
-        resp = self.session.get(page_url)
-        soup = BeautifulSoup(resp.text, features="lxml")
-        tr = soup.find("table", class_="listing").find_all("tr")
-        for _, val in enumerate(tr):
-            try:
-                title = val.find("a").text
-                title = title.replace("\n","")
-                href = val.find("a")['href']
-                data.append({'title': title, 'link':href})
-            except:
-                pass
-        return data
+        status = 0 # 0 = Success
+        try:
+            resp = await self.session.get(page_url)
+            soup = BeautifulSoup(resp.text, features="lxml")
+            tr = soup.find("table", class_="listing").find_all("tr")
+            for _, val in enumerate(tr):
+                try:
+                    title = val.find("a").text
+                    title = title.replace("\n","")
+                    href = val.find("a")['href']
+                    data.append({'title': title, 'link':href})
+                except:
+                    pass
+            self.logger.print("Finished fetching manga page -- {}".format(page_url),0)
+        except:
+            self.logger.print("Failed fetching {}".format(page_url),1)
+            return -1, [page_url]
+        return status, data
     
     def rerun(self, data, err_bucket, max_retry, mode):
         counter = 0
@@ -150,22 +157,26 @@ class Scraper:
                         err_bucket.append({'index' : pop['index'], 'link' : pop['link']})
         return data
 
-    def run(self, BASE_URL):
+    async def run(self, BASE_URL):
         self.BASE_URL = BASE_URL
-        self.create_connection()
         list_url = "{}/MangaList/Newest".format(self.BASE_URL)
         data = []
         err_bucket = []
         max_retry = 10
-        end = self.fetch_num_pages(list_url)
-        for i in range(1, end+1):
-            try:
-                self.logger.print("Fetching manga page -- {}?page={}".format(list_url, i),0)
-                l = self.fetch_manga_per_page("{}?page={}".format(list_url, i))
-                data.extend(l)
-            except:
-                self.logger.print("Error in fetching {}?page={} || Adding to backup error list for rerun".format(list_url, i),1)
-                err_bucket.append("{}?page={}".format(list_url, i))
+        self.create_connection()
+        end = await self.fetch_num_pages(list_url)
+        requests = ["{}?page={}".format(list_url, index) for index in range(1,end+1)]
+        async with aiometer.amap(
+            self.fetch_manga_per_page,
+            requests,
+            max_at_once=10, # Limit maximum number of concurrently running tasks.
+            max_per_second=5,  # Limit request rate to not overload the server.
+        ) as results:
+            async for status, resp in results:
+                if status == 0:
+                    data.extend(resp)
+                elif status == -1:
+                    err_bucket.append(resp[0])
         if len(err_bucket) > 0:
             data = self.rerun(data, err_bucket, max_retry, "fetch_manga_per_page")
             err_bucket.clear()
@@ -182,64 +193,12 @@ class Scraper:
         data = sorted(data, key=lambda k: k['title']) 
         return data
 
-class DB:
-    def __init__(self, file):
-        self.create_connection(file)
-
-    def create_connection(self, db_file):
-        self.conn = None
-        try:
-            self.conn = sqlite3.connect(db_file)
-        except sqlite3.Error as e:
-            print(e)
-    
-    def execute_query(self, query):
-        try:
-            c = self.conn.cursor()
-            c.execute(query)
-        except sqlite3.Error as e:
-            print(e)
-
-    def create_table_kissmanga(self):
-        sql_create_table = """CREATE TABLE IF NOT EXISTS masterlist (
-                                    link TEXT PRIMARY KEY,
-                                    title TEXT NOT NULL,
-                                    authors TEXT,
-                                    artists TEXT,
-                                    genres TEXT,
-                                    status TEXT,
-                                    summary TEXT,
-                                    numchapter INTEGER,
-                                    jdn INTEGER
-                                );"""
-        self.execute_query(sql_create_table)
-    
-    def post_row(self, tablename, rec):
-        try:
-            c = self.conn.cursor()
-            keys = ','.join(rec.keys())
-            question_marks = ','.join(list('?'*len(rec)))
-            values = tuple(rec.values())
-            c.execute('INSERT OR REPLACE INTO '+tablename+' ('+keys+') VALUES ('+question_marks+')', values)
-        except Exception as e:
-            print("Error : Exception in inserting data ({})".format(e))
-
-    def insert_data_kissmanga(self, data):
-        for _, manga in enumerate(data):
-                self.post_row("masterlist", manga)
-
-    def save_and_close(self):
-        try:
-            self.conn.commit()
-            self.conn.close()
-        except sqlite3.Error as e:
-            print(e)
 
 def main(args):
     print("-- Start --")
-    logger_ = logger.Logger()
-    sc = Scraper(logger_, args)
-    data = sc.run("https://kissmanga.com")
+    logger = logger_utils.Logger()
+    sc = Scraper(logger, args)
+    data = asyncio.run(sc.run("https://kissmanga.com"))
     sc.close()
     # Pickling
     with open('pickle_data', 'wb') as fp:
@@ -248,12 +207,12 @@ def main(args):
     with open ('pickle_data', 'rb') as fp:
         data = pickle.load(fp)
     # eof pickling
-    logger_.print("-- Finished scraping data, saving to .db --",0)
-    db = DB("KissManga.db")
+    logger.print("-- Finished scraping data, saving to .db --",0)
+    db = db_utils.DB("KissManga.db")
     db.create_table_kissmanga()
-    db.insert_data_kissmanga(data)
+    db.insert_data_bulk(tablename='masterlist', entries=data)
     db.save_and_close()
-    logger_.stop()
+    logger.stop()
     print("-- Stop --")
 
 if __name__ == "__main__":
