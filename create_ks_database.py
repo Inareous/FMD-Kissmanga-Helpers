@@ -11,11 +11,10 @@ import aiometer
 from helpers import logger_utils, browser_utils, db_utils
 
 class Scraper:
-    def __init__(self, logger, args):
+    def __init__(self, logger):
         self.sc = cloudscraper.create_scraper()
         self.BASE_URL = ''
         self.logger = logger
-        self.args = args
     
     def create_connection(self, use_browser):
         self.logger.checkpoint("Establishing connection to server")
@@ -137,7 +136,7 @@ class Scraper:
             return status, (page_url, index)
         return status, data
 
-    async def fetch_async(self, func, requests, max_at_once=10, max_per_second=5):
+    async def fetch_async(self, func, requests, max_at_once, max_per_second):
         data = []
         err_bucket = []
         async with aiometer.amap(
@@ -156,7 +155,6 @@ class Scraper:
 
     async def run(self, BASE_URL, use_browser=False, max_at_once=20, max_per_second=10, max_retry=10):
         self.BASE_URL = BASE_URL
-        use_browser = True ################### DEBUG
         list_url = "{}/MangaList/Newest".format(self.BASE_URL)
         data = []
         retry_counter = 0
@@ -195,7 +193,7 @@ class Scraper:
 async def main(args):
     print("-- Start --")
     logger = logger_utils.Logger()
-    sc = Scraper(logger, args)
+    sc = Scraper(logger)
     data = await sc.run("https://kissmanga.com", use_browser=args.enable_browser_cookies)
     await sc.close()
     # Pickling
@@ -209,15 +207,11 @@ async def main(args):
     db.insert_data_bulk(tablename='masterlist', entries=data)
     db.save_and_close()
     logger.stop()
-    print("-- Stop --")
+    print("-- Finished --")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--user-agent', dest="user_agent", help="Specify modules.json path")
-    parser.set_defaults(user_agent="")
-    parser.add_argument('--browser', dest="browser", help="Set default refresh time (in seconds)")
-    parser.set_defaults(refresh="")
-    parser.add_argument('--enable-browser', dest='enable_browser_cookies', action='store_true', help="ignore fetching chko value")
+    parser.add_argument('--enable-browser', dest='enable_browser_cookies', action='store_true', help="Use creds from browser")
     parser.set_defaults(enable_browser_cookies=False)
     args = parser.parse_args()
     asyncio.run(main(args))

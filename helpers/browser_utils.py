@@ -59,7 +59,7 @@ def get_browser_type():
             return 'chrome'
         elif 'firefox' in browser_id[0].lower():
             return 'firefox'
-    return browser_id
+    return browser_id[0]
 
 def fetch_cred_from_browser(domain, keys):
     browser_type = get_browser_type()

@@ -7,6 +7,8 @@ __pycache__/
 *.so
 
 # Unimportant folders and files
+.vscode/
+*_xc.*
 [Ff]md
 *.db
 *.pickle
