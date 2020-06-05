@@ -15,7 +15,7 @@ class Scraper:
         self.sc = cloudscraper.create_scraper()
         self.BASE_URL = ''
         self.logger = logger
-    
+
     def create_connection(self, use_browser):
         self.logger.checkpoint("Establishing connection to server")
         domain = ".kissmanga.com"
@@ -125,7 +125,8 @@ class Scraper:
             for _, val in enumerate(tr):
                 try:
                     title = val.find("a").text
-                    title = title.replace("\n","")
+                    title = bytes(title, 'utf-8').decode('utf-8', 'ignore')
+                    title = " ".join(title.split())
                     href = val.find("a")['href']
                     data.append({'title': title, 'link':href})
                 except:
