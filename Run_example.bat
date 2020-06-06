@@ -21,6 +21,6 @@ IF "%USE_BROWSER%" == "true" (
     set "USE_BROWSER=")
 
 START /wait "%PYTHON_PATH%" "%SCRIPT_PATH%" --path "%modules_path%" %ADD_COOKIES% %IGNORE_CHKO% %USE_BROWSER%
-START "" %fmd_exe%
+START "" "%fmd_exe%"
 
 exit

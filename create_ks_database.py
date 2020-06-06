@@ -125,7 +125,7 @@ class Scraper:
             for _, val in enumerate(tr):
                 try:
                     title = val.find("a").text
-                    title = bytes(title, 'utf-8').decode('utf-8', 'ignore')
+                    title = bytes(title, 'utf-8').decode('utf-8', 'ignore') #idk on comp_resource about this
                     title = " ".join(title.split())
                     href = val.find("a")['href']
                     data.append({'title': title, 'link':href})
@@ -169,7 +169,7 @@ class Scraper:
         while len(err_bucket) > 0 and retry_counter < max_retry:
             retry_counter += 1
             self.logger.checkpoint("Re-run {} links. Retry attempt = [{}/{}]".format(len(err_bucket), retry_counter,max_retry))
-            results, err_bucket = self.fetch_async(self.fetch_manga_per_page, err_bucket, max_at_once, max_per_second)
+            results, err_bucket = await self.fetch_async(self.fetch_manga_per_page, err_bucket, max_at_once, max_per_second)
             for result in results:
                 data.extend(result)
         retry_counter = 0
@@ -195,7 +195,12 @@ async def main(args):
     print("-- Start --")
     logger = logger_utils.Logger()
     sc = Scraper(logger)
-    data = await sc.run("https://kissmanga.com", use_browser=args.enable_browser_cookies)
+    data = await sc.run(
+        "https://kissmanga.com",
+        use_browser=args.enable_browser_cookies,
+        max_at_once=args.max_at_once,
+        max_per_second=args.max_per_second,
+        max_retry=args.max_retry)
     await sc.close()
     # Pickling
     logger.checkpoint("-- Saving data temporarily to pickle file --")
@@ -214,5 +219,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--enable-browser', dest='enable_browser_cookies', action='store_true', help="Use creds from browser")
     parser.set_defaults(enable_browser_cookies=False)
+    parser.add_argument('-max-at-once', dest='max_at_once', type=int, help="Set maximum number of concurrently running tasks. ")
+    parser.set_defaults(max_at_once=20)
+    parser.add_argument('-max-per-second', dest='max_per_second', type=int, help="Set maximum request rate per second.")
+    parser.set_defaults(max_per_second=10)
+    parser.add_argument('-max-retry', dest='max_retry', type=int, help="Set maximum retry on failed links.")
+    parser.set_defaults(max_retry=10)
     args = parser.parse_args()
     asyncio.run(main(args))
