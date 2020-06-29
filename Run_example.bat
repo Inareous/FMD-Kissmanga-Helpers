@@ -11,7 +11,7 @@ set "USE_SELENIUM=true"
 set "modules_path=%FMD_PATH%\\config\\modules.json"
 set "fmd_exe=%FMD_PATH%\\fmd.exe"
 IF NOT "%ADD_COOKIES%" == "" ( set "ADD_COOKIES=--a "%ADD_COOKIES%"" )
-IF NOT "%URL%" == "" ( set "URL=--url "%ADD_COOKIES%"" )
+IF NOT "%URL%" == "" ( set "URL=--url "%URL%"" )
 
 IF "%IGNORE_CHKO%" == "true" (
     set "IGNORE_CHKO=--ignore-chko") ELSE (

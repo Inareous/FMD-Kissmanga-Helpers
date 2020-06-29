@@ -7,6 +7,7 @@ A collection of simple script I use to make using [Free Manga Downloader](https:
 - **[cloudsraper](https://github.com/VeNoMouS/cloudscraper)** 
 - **[colorama](https://github.com/tartley/colorama)** <sup>*(I like pretty colors, deal with it)*</sup>
 - **[httpx](https://github.com/encode/httpx)** 
+- **[selenium](https://pypi.org/project/selenium/)** 
 
 # What's in here
 
