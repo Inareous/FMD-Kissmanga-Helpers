@@ -3,7 +3,7 @@ import json
 import argparse
 from html.parser import HTMLParser
 import re
-from helpers import browser_utils
+from helpers.selenium_utils import *
 
 class chko_parser(HTMLParser):
     def __init__(self):
@@ -73,7 +73,7 @@ def pass_all_to_fmd(path, cookies, agent, additional_cookies,chko, ignore_chko):
     except:
         print("Error : Unable to open modules.json. Put this script in the same folder or specify it's path")
 
-def main(path, add_cookie, url, ignore_chko, use_browser):
+def main(path, add_cookie, url, ignore_chko, use_selenium):
     print("Creating session")
     s = Scraper()
     print("Updating KissManga's Cookies")
@@ -83,9 +83,8 @@ def main(path, add_cookie, url, ignore_chko, use_browser):
     try:
         domain = ".kissmanga.com"
         keys = ['__cfduid','cf_clearance']
-        if use_browser:
-            print("Fetching Cookies from your browser")
-            cookies, u_agent = browser_utils.fetch_cred_from_browser(domain , keys)
+        if use_selenium:
+            cookies, u_agent = SeleniumBrowser().open_link(url, domain, keys)
         else:
             print("Fetching Cookies using cloudscraper module")
             cookies, u_agent = s.get_from_cloudscraper(url, domain, keys)
@@ -107,8 +106,8 @@ if __name__ == "__main__":
     parser.set_defaults(url="https://kissmanga.com/Manga/4-Cut-Hero/Ch-000--Prologue")
     parser.add_argument('--ignore-chko', dest='ignore_chko', action='store_true', help="ignore fetching chko value")
     parser.set_defaults(ignore_chko=False)
-    parser.add_argument('--use-browser', dest='use_browser', action='store_true', help="Use cookies and header from browser")
-    parser.set_defaults(use_browser=False)
+    parser.add_argument('--use-selenium', dest='use_selenium', action='store_true', help="Use selenium")
+    parser.set_defaults(use_selenium=False)
     args = parser.parse_args()
 
-    main(args.path, args.add_cookie, args.url, args.ignore_chko, args.use_browser)
+    main(args.path, args.add_cookie, args.url, args.ignore_chko, args.use_selenium)

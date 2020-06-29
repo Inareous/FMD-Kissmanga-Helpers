@@ -8,7 +8,7 @@ import asyncio
 import unicodedata
 import argparse
 import aiometer
-from helpers import logger_utils, browser_utils, db_utils
+from helpers import logger_utils, db_utils, selenium_utils
 
 class Scraper:
     def __init__(self, logger):
@@ -16,7 +16,7 @@ class Scraper:
         self.BASE_URL = ''
         self.logger = logger
 
-    def create_connection(self, use_browser):
+    def create_connection(self, use_selenium):
         self.logger.checkpoint("Establishing connection to server")
         domain = ".kissmanga.com"
         keys = ['__cfduid','cf_clearance']
@@ -30,9 +30,10 @@ class Scraper:
         except Exception as e:
             if "reCaptcha" in e.args[0]:
                 self.logger.error("reCaptcha detected, try using reCaptcha solver or fetch from browser")
-        if not ok and use_browser:
+        if not ok and use_selenium:
             self.logger.info("Fetching credentials from your browser")
-            cookies, u_agent = browser_utils.fetch_cred_from_browser(domain, keys)
+            url = "https://kissmanga.com/Manga/4-Cut-Hero/Ch-000--Prologue"
+            cookies, u_agent = selenium_utils.SeleniumBrowser().open_link(url, domain, keys)
         self.init_httpx(cookies, u_agent, domain, keys)
 
     def init_httpx(self, cookies, user_agent, domain, keys):
@@ -154,12 +155,12 @@ class Scraper:
         err_bucket = [(x,y,len(err_bucket)) for x,y in err_bucket]
         return data, err_bucket
 
-    async def run(self, BASE_URL, use_browser=False, max_at_once=20, max_per_second=10, max_retry=10):
+    async def run(self, BASE_URL, use_selenium=False, max_at_once=20, max_per_second=10, max_retry=10):
         self.BASE_URL = BASE_URL
         list_url = "{}/MangaList/Newest".format(self.BASE_URL)
         data = []
         retry_counter = 0
-        self.create_connection(use_browser)
+        self.create_connection(use_selenium)
         total_pages = await self.fetch_num_pages(list_url)
         requests = [("{}?page={}".format(list_url, index), index, total_pages) for index in range(1, total_pages+1)]
         self.logger.checkpoint("Fetching manga from {} pages".format(total_pages))
@@ -197,7 +198,7 @@ async def main(args):
     sc = Scraper(logger)
     data = await sc.run(
         "https://kissmanga.com",
-        use_browser=args.enable_browser_cookies,
+        use_selenium=args.use_selenium,
         max_at_once=args.max_at_once,
         max_per_second=args.max_per_second,
         max_retry=args.max_retry)
@@ -217,8 +218,8 @@ async def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--enable-browser', dest='enable_browser_cookies', action='store_true', help="Use creds from browser")
-    parser.set_defaults(enable_browser_cookies=False)
+    parser.add_argument('--enable-selenium', dest='use_selenium', action='store_true', help="Use selenium to get creds")
+    parser.set_defaults(use_selenium=False)
     parser.add_argument('-max-at-once', dest='max_at_once', type=int, help="Set maximum number of concurrently running tasks. ")
     parser.set_defaults(max_at_once=20)
     parser.add_argument('-max-per-second', dest='max_per_second', type=int, help="Set maximum request rate per second.")
