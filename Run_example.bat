@@ -1,7 +1,9 @@
 @echo off
 :: Set your variable here
 set "PYTHON_PATH=C:\\Python38\python.exe"
+:: Put 1 backslash on SCRIPT_PATH
 set "SCRIPT_PATH=D:\\my_scripts\FMD-Kissmanga-Helpers\ks_cookies_to_fmd.py"
+:: Put 2 backslash on FMD_PATH
 set "FMD_PATH=D:\\my_programs\\fmd"
 set "ADD_COOKIES=fullListMode=true;username=;password=;vns_readType1=0;"
 set "URL="

@@ -1,7 +1,9 @@
 @echo off
 :: Set your variable here
 set "PYTHON_PATH="
+:: Put 1 backslash on SCRIPT_PATH
 set "SCRIPT_PATH="
+:: Put 2 backslash on FMD_PATH
 set "FMD_PATH="
 set "ADD_COOKIES="
 set "URL="
