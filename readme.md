@@ -1,4 +1,4 @@
-A collection of simple script I use to make using [Free Manga Downloader](https://github.com/fmd-project-team/FMD) on kissmanga site easier.
+A collection of simple script I use to make using [Free Manga Downloader 2](https://github.com/dazedcat19/FMD2) on kissmanga site easier. *Not compatible with previous version of FMD*
 
 # Dependencies
 - Python 3.x
@@ -36,8 +36,8 @@ requirements.txt`)
 
     Leave `URL` empty unless you really need to for some reason, the default url used is `https://kissmanga.com/Manga/4-Cut-Hero/Ch-000--Prologue`
 
-    `IGNORE_CHKO` is there if you want to ignore updating chko value in your FMD. IIRC IV is never updated but sometimes chko does.
-
 6. Run your copy of `Run_example.bat`
    
 7. Misc : If you want, use your `Run_example.bat` everytime you want to open FMD to make sure you get fresh cookies. Don't forget to change the icon too!
+
+8. Another Misc : If you want to use another browser, edit `cookies, u_agent = SeleniumBrowser().open_link(url, domain, keys)` to `cookies, u_agent = SeleniumBrowser(browsertype="Firefox", driver_path='').open_link(url, domain, keys)`. Set `browsertype` to whatever you want (Firefox, Chrome, Edge) and `driver_path` to where your `browserdriver.exe` located (or just put `''` and replace the `chromedriver.exe` in `/assets`).

@@ -7,17 +7,12 @@ set "SCRIPT_PATH=D:\\my_scripts\FMD-Kissmanga-Helpers\ks_cookies_to_fmd.py"
 set "FMD_PATH=D:\\my_programs\\fmd"
 set "ADD_COOKIES=fullListMode=true;username=;password=;vns_readType1=0;"
 set "URL="
-set "IGNORE_CHKO=false"
 set "USE_SELENIUM=true"
 ::
-set "modules_path=%FMD_PATH%\\config\\modules.json"
+set "modules_path=%FMD_PATH%\\userdata\\modules.json"
 set "fmd_exe=%FMD_PATH%\\fmd.exe"
 IF NOT "%ADD_COOKIES%" == "" ( set "ADD_COOKIES=--a "%ADD_COOKIES%"" )
 IF NOT "%URL%" == "" ( set "URL=--url "%URL%"" )
-
-IF "%IGNORE_CHKO%" == "true" (
-    set "IGNORE_CHKO=--ignore-chko") ELSE (
-    set "IGNORE_CHKO=")
 
 IF "%USE_SELENIUM%" == "true" (
     set "USE_SELENIUM=--use-selenium") ELSE (
