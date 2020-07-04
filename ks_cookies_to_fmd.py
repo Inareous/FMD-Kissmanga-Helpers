@@ -60,6 +60,7 @@ def pass_all_to_fmd(path, cookies, agent, additional_cookies):
             data = json.load(f)
             for i in data:
                 if i['ID'] == '4f40515fb43640ddb08eb61278fc97a5': #kissmanga
+                    i['Cookies'] = [] #Wipe FMD2's weird cookiejar
                     i['Settings']['Enabled'] = True
                     i['Settings']['HTTP']['Cookies'] = cookie_string if additional_cookies == "" else cookie_string + ";" + additional_cookies
                     i['Settings']['HTTP']['UserAgent'] = agent
